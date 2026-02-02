@@ -2,6 +2,11 @@
   "name": "smart-farmer",
   "version": "1.0.0",
   "description": "Offline-first crop disease detection app",
+  "private": true,
+  "workspaces": [
+    "smart_farmer",
+    "smart_farmer.tests"
+  ],
   "scripts": {
     "test": "cd smart_farmer.tests && npm run test:unit",
     "test:unit": "cd smart_farmer.tests && npm run test:unit",
@@ -11,7 +16,9 @@
     "test:coverage": "cd smart_farmer.tests && npm run test:coverage",
     "test:install": "cd smart_farmer.tests && npm install",
     "android:build": "cd smart_farmer && eas build --profile development --platform android",
-    "ios:build": "cd smart_farmer && eas build --profile development --platform ios"
+    "ios:build": "cd smart_farmer && eas build --profile development --platform ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "repository": {
     "type": "git",
@@ -22,6 +29,12 @@
     "@react-navigation/bottom-tabs": "^7.10.1",
     "@react-navigation/native": "^7.1.28",
     "@react-navigation/stack": "^7.6.16",
+    "expo": "^54.0.33",
+    "expo-camera": "^17.0.10",
+    "expo-dev-client": "^6.0.20",
+    "expo-file-system": "^19.0.21",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "^4.20.0"
   },
