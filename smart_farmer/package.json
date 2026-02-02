@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "android:build": "eas build --profile development --platform android"
+    "android:build": "eas build --profile development --platform android",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo/cli": "^54.0.23",
@@ -11,5 +13,7 @@
     "expo-file-system": "^19.0.21",
     "react": "19.1.0",
     "react-native": "0.81.5"
-  }
+  },
+  "name": "smart_farmer",
+  "version": "1.0.0"
 }
