@@ -15,10 +15,15 @@
     "test:watch": "cd smart_farmer.tests && npm run test:watch",
     "test:coverage": "cd smart_farmer.tests && npm run test:coverage",
     "test:install": "cd smart_farmer.tests && npm install",
-    "android:build": "cd smart_farmer && eas build --profile development --platform android",
-    "ios:build": "cd smart_farmer && eas build --profile development --platform ios",
-    "android": "expo run:android",
-    "ios": "expo run:ios"
+    "android:build:preview": "npx eas-cli build --profile preview --platform android",
+    "android:build:production": "npx eas-cli build --profile production --platform android",
+    "android:emulator:list": "emulator -list-avds",
+    "android:emulator:start": "emulator @Pixel_6_API_34 -no-snapshot-load",
+    "android:adb:devices": "adb devices",
+    "android:apk:install": "adb install -r",
+    "expo:doctor": "npx expo-doctor",
+    "expo:prebuild": "npx expo prebuild --no-install",
+    "ios:build": "npx eas-cli build --profile development --platform ios"
   },
   "repository": {
     "type": "git",
@@ -38,12 +43,12 @@
     "expo-sqlite": "~16.0.10",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
     "react-native-safe-area-context": "^5.6.2",
-    "react-native-screens": "^4.20.0",
+    "react-native-screens": "~4.16.0",
     "react-native-url-polyfill": "^3.0.0"
   },
   "devDependencies": {
-    "@types/react": "^19.2.9",
-    "@types/react-native": "^0.72.8"
+    "@types/react": "~19.1.10"
   }
 }
