@@ -24,6 +24,9 @@ jobs:
             package-lock.json
             smart_farmer.tests/package-lock.json
 
+      - name: Install build dependencies (for better-sqlite3)
+        run: sudo apt-get update && sudo apt-get install -y build-essential python3
+
       - name: Install root dependencies
         run: npm ci
 
@@ -58,4 +61,5 @@ jobs:
             echo "::error::Potential secrets found in tracked files!"
             exit 1
           fi
+          echo "No secrets detected in tracked files."
           echo "No secrets detected in tracked files."
