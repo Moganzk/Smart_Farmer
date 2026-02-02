@@ -6,7 +6,7 @@ import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
 export type AuthStackParamList = {
   Login: undefined;
-  OTP: { phoneNumber: string };
+  OTP: { phoneNumber: string; authMethod?: 'phone' | 'email' };
   ProfileSetup: undefined;
 };
 

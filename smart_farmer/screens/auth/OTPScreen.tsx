@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { Backgrounds } from '../../utils/assetsRegistry';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../utils/supabase';
+
+// Dev mode bypass - set to false in production
+const DEV_MODE = __DEV__ || true; // Always true for now until SMS is set up
+const DEV_OTP = '123456'; // Fixed OTP for development
 
 type OTPScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'OTP'>;
 type OTPScreenRouteProp = RouteProp<AuthStackParamList, 'OTP'>;
@@ -17,20 +22,73 @@ interface Props {
 
 export default function OTPScreen({ navigation, route }: Props) {
   const [otp, setOtp] = useState('');
-  const { phoneNumber } = route.params;
+  const [isLoading, setIsLoading] = useState(false);
+  const { phoneNumber, authMethod = 'phone' } = route.params;
   const { login } = useAuth();
 
   const handleVerify = async () => {
     if (otp.length !== 6) {
       logger.warn('OTP verification attempt with invalid length', { length: otp.length });
+      Alert.alert('Invalid OTP', 'Please enter a 6-digit code');
       return;
     }
 
-    logger.info('OTP verification initiated', { phoneNumber });
-    // TODO: Verify OTP with backend API
-    const userId = `user_${Date.now()}`;
-    await login(phoneNumber, userId);
-    navigation.navigate('ProfileSetup');
+    setIsLoading(true);
+    logger.info('OTP verification initiated', { phoneNumber, authMethod });
+
+    if (DEV_MODE) {
+      // Dev bypass: Accept fixed OTP "123456"
+      if (otp === DEV_OTP) {
+        logger.info('DEV MODE: OTP verified successfully');
+        const userId = `user_${Date.now()}`;
+        await login(phoneNumber, userId);
+        navigation.navigate('ProfileSetup');
+      } else {
+        logger.warn('DEV MODE: Invalid OTP entered', { entered: otp, expected: DEV_OTP });
+        Alert.alert('Invalid OTP', 'In dev mode, use OTP: 123456');
+      }
+    } else {
+      // Production: Verify with Supabase
+      try {
+        const { data, error } = await supabase.auth.verifyOtp({
+          phone: phoneNumber,
+          token: otp,
+          type: 'sms',
+        });
+
+        if (error) throw error;
+
+        const userId = data.user?.id || `user_${Date.now()}`;
+        await login(phoneNumber, userId);
+        navigation.navigate('ProfileSetup');
+        logger.info('OTP verified successfully', { userId });
+      } catch (error: any) {
+        logger.error('OTP verification failed', error);
+        Alert.alert('Verification Failed', error.message || 'Invalid OTP. Please try again.');
+      }
+    }
+    setIsLoading(false);
+  };
+
+  const handleResendOTP = async () => {
+    if (DEV_MODE) {
+      Alert.alert('Dev Mode', 'OTP is always: 123456');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phoneNumber,
+      });
+      if (error) throw error;
+      Alert.alert('OTP Sent', 'A new OTP has been sent to your phone');
+      logger.info('OTP resent successfully', { phoneNumber });
+    } catch (error: any) {
+      logger.error('Failed to resend OTP', error);
+      Alert.alert('Error', error.message || 'Failed to resend OTP');
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -45,6 +103,12 @@ export default function OTPScreen({ navigation, route }: Props) {
           Enter the 6-digit code sent to {phoneNumber}
         </Text>
 
+        {DEV_MODE && (
+          <View style={styles.devBanner}>
+            <Text style={styles.devBannerText}>🔧 Dev Mode: Use OTP 123456</Text>
+          </View>
+        )}
+
         <View style={styles.form}>
           <TextInput
             style={styles.input}
@@ -57,13 +121,20 @@ export default function OTPScreen({ navigation, route }: Props) {
           />
 
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={handleVerify}
+            disabled={isLoading}
           >
-            <Text style={styles.buttonText}>Verify</Text>
+            <Text style={styles.buttonText}>
+              {isLoading ? 'Verifying...' : 'Verify'}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.resendButton}>
+          <TouchableOpacity 
+            style={styles.resendButton}
+            onPress={handleResendOTP}
+            disabled={isLoading}
+          >
             <Text style={styles.resendText}>Resend OTP</Text>
           </TouchableOpacity>
         </View>
@@ -93,8 +164,20 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#E8F5E9',
-    marginBottom: 40,
+    marginBottom: 20,
     textAlign: 'center',
+  },
+  devBanner: {
+    backgroundColor: 'rgba(255, 224, 130, 0.9)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  devBannerText: {
+    color: '#5D4037',
+    fontSize: 14,
+    fontWeight: '600',
   },
   form: {
     width: '100%',
@@ -115,6 +198,9 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     marginBottom: 15,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     color: '#FFFFFF',
