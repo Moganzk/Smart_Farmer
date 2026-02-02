@@ -47,7 +47,8 @@
         {
           "cameraPermission": "Allow Smart Farmer to access your camera to scan plant diseases."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "extra": {
       "eas": {
