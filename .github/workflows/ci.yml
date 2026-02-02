@@ -57,7 +57,7 @@ jobs:
       - name: Check for secrets in code
         run: |
           # Check for potential API keys or secrets in tracked files
-          if git grep -l -E "(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_JWT_SECRET|sk_live_|sk_test_)" -- ':(exclude).env*' ':(exclude)*.example'; then
+          if git grep -l -E "(SUPABASE_SERVICE_ROLE|SUPABASE_JWT_SECRET|sk_live_|sk_test_)" -- ':(exclude).env*' ':(exclude)*.example' ':(exclude).github/workflows/*'; then
             echo "::error::Potential secrets found in tracked files!"
             exit 1
           fi
