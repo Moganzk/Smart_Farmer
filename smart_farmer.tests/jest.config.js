@@ -38,6 +38,11 @@ module.exports = {
     '^expo-sqlite$': '<rootDir>/mocks/expo-sqlite.js',
     // AsyncStorage mock
     '^@react-native-async-storage/async-storage$': '<rootDir>/mocks/async-storage.js',
+    // Supabase mocks
+    '^react-native-url-polyfill/auto$': '<rootDir>/mocks/react-native-url-polyfill.js',
+    '^@supabase/supabase-js$': '<rootDir>/mocks/supabase.js',
+    '^\\.\\./utils/supabase$': '<rootDir>/mocks/supabase.js',
+    '^\\.\\./.*/utils/supabase$': '<rootDir>/mocks/supabase.js',
   },
   setupFilesAfterEnv: ['<rootDir>/setup.ts'],
   clearMocks: true,
