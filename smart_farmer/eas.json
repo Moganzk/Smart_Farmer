@@ -28,7 +28,8 @@
       },
       "ios": {
         "simulator": false
-      }
+      },
+      "distribution": "internal"
     }
   },
   "submit": {
