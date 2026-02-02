@@ -1,0 +1,96 @@
+# ============ SECRETS & ENV FILES ============
+# CRITICAL: Never commit these
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.test
+!.env.example
+
+# ============ DEPENDENCIES ============
+node_modules/
+.pnp/
+.pnp.js
+
+# ============ EXPO / REACT NATIVE ============
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# ============ NEXT.JS ============
+.next/
+out/
+build/
+
+# ============ DATABASE / SQLITE ============
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ============ TEST ARTIFACTS ============
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+junit.xml
+
+# ============ BUILD OUTPUTS ============
+*.apk
+*.aab
+*.ipa
+*.app
+android/app/build/
+ios/build/
+ios/Pods/
+
+# ============ LOGS ============
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ============ OS FILES ============
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============ IDE / EDITOR ============
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# ============ VS CODE ============
+# Keep .vscode for shared settings, but ignore personal files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ============ MISC ============
+*.tsbuildinfo
+.cache/
+tmp/
+temp/
+*.tmp
+*.temp
+.vercel

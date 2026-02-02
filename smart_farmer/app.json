@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Smart Farmer",
+    "slug": "smart-farmer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/Logo/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/Images/Splash Screen/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.smartfarmer.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to the camera to scan and diagnose plant diseases.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to save and view scanned plant images."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/Logo/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.smartfarmer.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/Logo/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Smart Farmer to access your camera to scan plant diseases."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
