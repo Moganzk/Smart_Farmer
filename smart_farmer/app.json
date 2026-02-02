@@ -4,10 +4,10 @@
     "slug": "smart-farmer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Logo/icon.png",
+    "icon": "./assets/logo/app_icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/Images/Splash Screen/splash.png",
+      "image": "./assets/images/Splash Screen/splash_background.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -24,7 +24,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Logo/adaptive-icon.png",
+        "foregroundImage": "./assets/logo/app_icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.smartfarmer.app",
@@ -38,7 +38,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/Logo/favicon.png"
+      "favicon": "./assets/logo/app_icon.png"
     },
     "plugins": [
       "expo-dev-client",
