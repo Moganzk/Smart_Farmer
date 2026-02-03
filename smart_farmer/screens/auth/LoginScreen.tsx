@@ -6,10 +6,10 @@ import { ScreenBackground } from '../../components/ScreenBackground';
 import { AuthBackgrounds, Logos } from '../../utils/assetsRegistry';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../utils/supabase';
+import { supabase, isSupabaseConfigured } from '../../utils/supabase';
 
-// Dev mode bypass - set to false in production
-const DEV_MODE = __DEV__ || true; // Always true for now until SMS is set up
+// Dev mode bypass - always true until Supabase is properly configured
+const DEV_MODE = !isSupabaseConfigured || __DEV__ || true;
 
 type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -41,7 +41,7 @@ export default function LoginScreen({ navigation }: Props) {
         'SMS disabled. Use OTP: 123456',
         [{ text: 'OK', onPress: () => navigation.navigate('OTP', { phoneNumber, authMethod: 'phone' }) }]
       );
-    } else {
+    } else if (supabase) {
       // Production: Use Supabase phone auth (requires Twilio setup)
       try {
         const { error } = await supabase.auth.signInWithOtp({
@@ -53,6 +53,9 @@ export default function LoginScreen({ navigation }: Props) {
         logger.error('Failed to send OTP', error);
         Alert.alert('Error', error.message || 'Failed to send OTP');
       }
+    } else {
+      Alert.alert('Configuration Error', 'Supabase is not configured. Using dev mode.');
+      navigation.navigate('OTP', { phoneNumber, authMethod: 'phone' });
     }
     setIsLoading(false);
   };
@@ -66,6 +69,17 @@ export default function LoginScreen({ navigation }: Props) {
 
     setIsLoading(true);
     logger.info('Email login initiated', { email });
+
+    if (!supabase || DEV_MODE) {
+      // Dev mode or no Supabase - just show a message
+      Alert.alert(
+        'Dev Mode',
+        'Email auth requires Supabase configuration. Use phone login with OTP: 123456',
+        [{ text: 'OK' }]
+      );
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { error } = await supabase.auth.signInWithOtp({

@@ -1,11 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Alert, ActivityIndicator } from 'react-native';
 import { Backgrounds, Icons } from '../../utils/assetsRegistry';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import { runPullOnce } from '../../db/pullSync';
+import { runSync } from '../../db/syncWorker';
+import { getDeviceId } from '../../utils/deviceId';
 
 export default function SettingsScreen() {
   const { logout } = useAuth();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -14,6 +18,62 @@ export default function SettingsScreen() {
     } catch (error) {
       logger.error('Logout failed', error);
     }
+  };
+
+  /**
+   * DEV ONLY: Manual sync trigger
+   * Long-press on "About" triggers full sync (push + pull)
+   */
+  const handleDevSync = async () => {
+    if (!__DEV__) return;
+    
+    if (isSyncing) {
+      Alert.alert('Sync in Progress', 'Please wait for current sync to complete.');
+      return;
+    }
+
+    Alert.alert(
+      'Dev Sync',
+      'Trigger manual sync? (Push local changes, then pull server updates)',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sync Now',
+          onPress: async () => {
+            setIsSyncing(true);
+            try {
+              logger.info('[DEV] Manual sync triggered');
+              
+              // Get device ID
+              const deviceId = await getDeviceId();
+              
+              // 1. Push local changes to server
+              logger.info('[DEV] Starting push sync...');
+              const pushResult = await runSync();
+              logger.info('[DEV] Push sync complete', pushResult);
+              
+              // 2. Pull server updates to local
+              logger.info('[DEV] Starting pull sync...');
+              const pullResult = await runPullOnce({ deviceId });
+              logger.info('[DEV] Pull sync complete', pullResult);
+              
+              // Show results
+              Alert.alert(
+                'Sync Complete',
+                `Push: ${pushResult.success ? 'Success' : 'Failed'}\n` +
+                `Pull: ${pullResult.totalFetched} fetched, ${pullResult.totalInserted} inserted, ` +
+                `${pullResult.totalUpdated} updated, ${pullResult.totalErrors} errors`
+              );
+            } catch (error) {
+              logger.error('[DEV] Manual sync failed', error);
+              Alert.alert('Sync Failed', error instanceof Error ? error.message : 'Unknown error');
+            } finally {
+              setIsSyncing(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -49,10 +109,36 @@ export default function SettingsScreen() {
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>About</Text>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onLongPress={__DEV__ ? handleDevSync : undefined}
+            delayLongPress={1000}
+          >
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuText}>About</Text>
+              {__DEV__ && isSyncing && (
+                <ActivityIndicator size="small" color="#4CAF50" style={styles.syncIndicator} />
+              )}
+            </View>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
+
+          {/* DEV ONLY: Visible sync button for easier testing */}
+          {__DEV__ && (
+            <TouchableOpacity 
+              style={[styles.menuItem, styles.devMenuItem]}
+              onPress={handleDevSync}
+              disabled={isSyncing}
+            >
+              <View style={styles.menuItemContent}>
+                <Text style={[styles.menuText, styles.devMenuText]}>🔄 Dev: Manual Sync</Text>
+                {isSyncing && (
+                  <ActivityIndicator size="small" color="#FF9800" style={styles.syncIndicator} />
+                )}
+              </View>
+              <Text style={styles.menuArrow}>›</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -103,6 +189,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   menuText: {
     fontSize: 16,
     color: '#333',
@@ -110,6 +200,15 @@ const styles = StyleSheet.create({
   menuArrow: {
     fontSize: 24,
     color: '#999',
+  },
+  syncIndicator: {
+    marginLeft: 10,
+  },
+  devMenuItem: {
+    backgroundColor: '#FFF3E0',
+  },
+  devMenuText: {
+    color: '#FF9800',
   },
   logoutButton: {
     backgroundColor: '#F44336',

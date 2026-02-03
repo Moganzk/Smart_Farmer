@@ -16,7 +16,7 @@
 import { getDatabase, getISOTimestamp, generateUUID } from './database';
 import type { Tip, Notification, SyncStatus } from './types';
 import { logger } from '../utils/logger';
-import { supabase } from '../utils/supabase';
+import { supabase, getCurrentUserId, isSupabaseConfigured } from '../utils/supabase';
 
 // ============ Types ============
 
@@ -27,6 +27,21 @@ export interface PullSupabaseClient {
       gt: (column: string, value: string) => {
         order: (column: string, options?: { ascending?: boolean }) => {
           limit: (count: number) => Promise<{ data: any[] | null; error: any }>;
+        };
+        eq: (column: string, value: string) => {
+          order: (column: string, options?: { ascending?: boolean }) => {
+            limit: (count: number) => Promise<{ data: any[] | null; error: any }>;
+          };
+        };
+      };
+      eq: (column: string, value: string) => {
+        order: (column: string, options?: { ascending?: boolean }) => {
+          limit: (count: number) => Promise<{ data: any[] | null; error: any }>;
+        };
+        gt: (column: string, value: string) => {
+          order: (column: string, options?: { ascending?: boolean }) => {
+            limit: (count: number) => Promise<{ data: any[] | null; error: any }>;
+          };
         };
       };
       order: (column: string, options?: { ascending?: boolean }) => {
@@ -440,6 +455,59 @@ async function fetchServerRecords(
   }
 }
 
+/**
+ * Fetch records from server for a specific user.
+ * Used for user-scoped tables like notifications.
+ * If userId is not provided, relies on RLS to filter.
+ */
+async function fetchServerRecordsForUser(
+  tableName: string,
+  lastSyncAt: string | null,
+  limit: number,
+  client: PullSupabaseClient,
+  userId?: string
+): Promise<{ data: ServerRecord[] | null; error: any }> {
+  try {
+    // Note: RLS policies will enforce user filtering even if userId is not provided
+    // The eq('user_id', userId) is an explicit filter for clarity
+    if (lastSyncAt && userId) {
+      // Fetch user's records updated since lastSync
+      return await client
+        .from(tableName)
+        .select('*')
+        .eq('user_id', userId)
+        .gt('updated_at', lastSyncAt)
+        .order('updated_at', { ascending: true })
+        .limit(limit);
+    } else if (lastSyncAt) {
+      // Fetch records updated since lastSync (RLS will filter by user)
+      return await client
+        .from(tableName)
+        .select('*')
+        .gt('updated_at', lastSyncAt)
+        .order('updated_at', { ascending: true })
+        .limit(limit);
+    } else if (userId) {
+      // Initial sync for specific user
+      return await client
+        .from(tableName)
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: true })
+        .limit(limit);
+    } else {
+      // Initial sync (RLS will filter by user)
+      return await client
+        .from(tableName)
+        .select('*')
+        .order('updated_at', { ascending: true })
+        .limit(limit);
+    }
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
 // ============ Pull Sync Operations ============
 
 /**
@@ -536,17 +604,36 @@ export async function pullTips(
 
 /**
  * Pull sync notifications from server.
+ * Filters by user_id to only pull the current user's notifications (RLS enforced).
+ * 
+ * @param limit - Maximum records to fetch
+ * @param deviceId - Device ID for new records
+ * @param client - Supabase client (injectable for testing)
+ * @param userId - Optional user ID override (for testing)
  */
 export async function pullNotifications(
   limit: number = 100,
   deviceId: string = 'default-device',
-  client: PullSupabaseClient = supabase
+  client: PullSupabaseClient = supabase,
+  userId?: string
 ): Promise<PullSyncResult> {
   const tableName = 'notifications';
   logger.info('Pull sync starting', { table: tableName });
   
+  // Get current user ID for filtering (RLS will also enforce this)
+  const authUserId = userId || await getCurrentUserId();
+  if (!authUserId && !userId) {
+    logger.warn('pullNotifications: No authenticated user, notifications will be filtered by RLS');
+  }
+  
   const lastSyncAt = getLastPullAt(tableName);
-  const { data, error } = await fetchServerRecords(tableName, lastSyncAt, limit, client);
+  const { data, error } = await fetchServerRecordsForUser(
+    tableName, 
+    lastSyncAt, 
+    limit, 
+    client,
+    authUserId || undefined
+  );
   
   if (error) {
     logger.error('Pull sync: fetch error', { table: tableName, error: error.message });

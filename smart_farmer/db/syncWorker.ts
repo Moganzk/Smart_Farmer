@@ -17,7 +17,7 @@ import { getDatabase, getISOTimestamp } from './database';
 import { getPendingQueue, markSynced, markFailed } from './syncQueue';
 import type { SyncQueueEntry, SyncOperation, Scan, Diagnosis } from './types';
 import { logger } from '../utils/logger';
-import { supabase } from '../utils/supabase';
+import { supabase, getCurrentUserId, isSupabaseConfigured } from '../utils/supabase';
 
 // ============ Types ============
 
@@ -55,13 +55,17 @@ export interface SupabaseClient {
 /**
  * Map local scan record to Supabase schema.
  * Handles field name differences and required transformations.
+ * 
+ * @param scan - Local scan record
+ * @param authUserId - Authenticated user ID from Supabase auth (optional, falls back to user_local_id)
  */
-export function mapScanToServer(scan: Scan): Record<string, unknown> {
+export function mapScanToServer(scan: Scan, authUserId?: string): Record<string, unknown> {
   return {
     // Use local_id as the primary key on server
     id: scan.local_id,
     device_id: scan.device_id,
-    user_id: scan.user_local_id, // Server uses user_id, not user_local_id
+    // Prefer auth user ID for RLS, fall back to local user ID
+    user_id: authUserId || scan.user_local_id,
     image_path: scan.image_path,
     image_server_url: scan.image_server_url,
     crop_type: scan.crop_type,
@@ -70,6 +74,7 @@ export function mapScanToServer(scan: Scan): Record<string, unknown> {
     longitude: scan.longitude,
     deleted_at: scan.deleted_at,
     version: scan.version,
+    local_id: scan.local_id, // Store for mapping/debug
     created_at: scan.scanned_at, // Use scanned_at as created_at
     updated_at: scan.updated_at,
   };
@@ -77,13 +82,18 @@ export function mapScanToServer(scan: Scan): Record<string, unknown> {
 
 /**
  * Map local diagnosis record to Supabase schema.
+ * 
+ * @param diagnosis - Local diagnosis record
+ * @param authUserId - Authenticated user ID from Supabase auth (optional)
  */
-export function mapDiagnosisToServer(diagnosis: Diagnosis): Record<string, unknown> {
+export function mapDiagnosisToServer(diagnosis: Diagnosis, authUserId?: string): Record<string, unknown> {
   return {
     // Use local_id as the primary key on server
     id: diagnosis.local_id,
     device_id: diagnosis.device_id,
     scan_id: diagnosis.scan_local_id, // Server uses scan_id, not scan_local_id
+    // Include user_id for RLS policies
+    user_id: authUserId,
     disease_name: diagnosis.disease_name,
     confidence: diagnosis.confidence,
     severity: diagnosis.severity,
@@ -91,6 +101,7 @@ export function mapDiagnosisToServer(diagnosis: Diagnosis): Record<string, unkno
     diagnosed_at: diagnosis.diagnosed_at,
     deleted_at: diagnosis.deleted_at,
     version: diagnosis.version,
+    local_id: diagnosis.local_id, // Store for mapping/debug
     created_at: diagnosis.diagnosed_at, // Use diagnosed_at as created_at
     updated_at: diagnosis.updated_at,
   };
@@ -132,18 +143,33 @@ export function getLocalDiagnosis(localId: string): Diagnosis | null {
 
 /**
  * Push an insert operation to Supabase.
+ * Gets the authenticated user ID and includes it in the server data for RLS.
  * 
  * @param tableName - The table to insert into
  * @param localId - The local_id of the record
  * @param client - Supabase client (injectable for testing)
+ * @param userId - Optional user ID override (for testing)
  * @returns SyncResult with success status
  */
 export async function pushInsert(
   tableName: string,
   localId: string,
-  client: SupabaseClient = supabase
+  client: SupabaseClient = supabase,
+  userId?: string
 ): Promise<SyncResult> {
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured && !userId) {
+      logger.warn('pushInsert: Supabase not configured, skipping sync');
+      return { success: false, localId, error: 'Supabase not configured' };
+    }
+
+    // Get authenticated user ID if not provided
+    const authUserId = userId || await getCurrentUserId();
+    if (!authUserId) {
+      logger.warn('pushInsert: No authenticated user, sync may fail RLS');
+    }
+
     // Fetch local record
     let record: Scan | Diagnosis | null = null;
     let serverData: Record<string, unknown>;
@@ -153,16 +179,18 @@ export async function pushInsert(
       if (!record) {
         return { success: false, localId, error: 'Local scan record not found' };
       }
-      serverData = mapScanToServer(record);
+      serverData = mapScanToServer(record, authUserId || undefined);
     } else if (tableName === 'diagnoses') {
       record = getLocalDiagnosis(localId);
       if (!record) {
         return { success: false, localId, error: 'Local diagnosis record not found' };
       }
-      serverData = mapDiagnosisToServer(record);
+      serverData = mapDiagnosisToServer(record, authUserId || undefined);
     } else {
       return { success: false, localId, error: `Unsupported table: ${tableName}` };
     }
+
+    logger.info('Pushing to Supabase', { tableName, localId, userId: authUserId });
 
     // Push to Supabase
     const { data, error } = await client.from(tableName).insert(serverData);

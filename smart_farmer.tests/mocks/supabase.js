@@ -28,7 +28,15 @@ const mockSupabase = {
   }),
 };
 
+// Export isSupabaseConfigured as false in tests (dev mode)
+const isSupabaseConfigured = false;
+
+// Export getSupabase function
+const getSupabase = jest.fn().mockReturnValue(null);
+
 module.exports = {
   supabase: mockSupabase,
+  isSupabaseConfigured,
+  getSupabase,
   createClient: jest.fn(() => mockSupabase),
 };

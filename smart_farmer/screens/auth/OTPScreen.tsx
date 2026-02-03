@@ -6,10 +6,10 @@ import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { Backgrounds } from '../../utils/assetsRegistry';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../utils/supabase';
+import { supabase, isSupabaseConfigured } from '../../utils/supabase';
 
-// Dev mode bypass - set to false in production
-const DEV_MODE = __DEV__ || true; // Always true for now until SMS is set up
+// Dev mode bypass - always true until Supabase is properly configured
+const DEV_MODE = !isSupabaseConfigured || __DEV__ || true;
 const DEV_OTP = '123456'; // Fixed OTP for development
 
 type OTPScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'OTP'>;
@@ -47,7 +47,7 @@ export default function OTPScreen({ navigation, route }: Props) {
         logger.warn('DEV MODE: Invalid OTP entered', { entered: otp, expected: DEV_OTP });
         Alert.alert('Invalid OTP', 'In dev mode, use OTP: 123456');
       }
-    } else {
+    } else if (supabase) {
       // Production: Verify with Supabase
       try {
         const { data, error } = await supabase.auth.verifyOtp({
@@ -66,12 +66,15 @@ export default function OTPScreen({ navigation, route }: Props) {
         logger.error('OTP verification failed', error);
         Alert.alert('Verification Failed', error.message || 'Invalid OTP. Please try again.');
       }
+    } else {
+      // Fallback if Supabase not configured
+      Alert.alert('Configuration Error', 'Supabase not configured. Using dev mode.');
     }
     setIsLoading(false);
   };
 
   const handleResendOTP = async () => {
-    if (DEV_MODE) {
+    if (DEV_MODE || !supabase) {
       Alert.alert('Dev Mode', 'OTP is always: 123456');
       return;
     }
