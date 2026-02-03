@@ -467,10 +467,18 @@ async function fetchServerRecordsForUser(
   client: PullSupabaseClient,
   userId?: string
 ): Promise<{ data: ServerRecord[] | null; error: any }> {
+  logger.debug('Fetching server records', { 
+    table: tableName, 
+    lastSyncAt, 
+    userId: userId ? `${userId.substring(0, 8)}...` : 'none (RLS only)',
+    limit 
+  });
+  
   try {
     // Note: RLS policies will enforce user filtering even if userId is not provided
     // The eq('user_id', userId) is an explicit filter for clarity
     if (lastSyncAt && userId) {
+      logger.debug('Pull sync: filtering by user_id + lastSyncAt', { table: tableName });
       // Fetch user's records updated since lastSync
       return await client
         .from(tableName)
@@ -480,6 +488,7 @@ async function fetchServerRecordsForUser(
         .order('updated_at', { ascending: true })
         .limit(limit);
     } else if (lastSyncAt) {
+      logger.debug('Pull sync: filtering by lastSyncAt only (RLS enforced)', { table: tableName });
       // Fetch records updated since lastSync (RLS will filter by user)
       return await client
         .from(tableName)
@@ -488,6 +497,7 @@ async function fetchServerRecordsForUser(
         .order('updated_at', { ascending: true })
         .limit(limit);
     } else if (userId) {
+      logger.debug('Pull sync: initial sync with user_id filter', { table: tableName });
       // Initial sync for specific user
       return await client
         .from(tableName)
@@ -496,6 +506,7 @@ async function fetchServerRecordsForUser(
         .order('updated_at', { ascending: true })
         .limit(limit);
     } else {
+      logger.debug('Pull sync: initial sync without user_id (RLS enforced)', { table: tableName });
       // Initial sync (RLS will filter by user)
       return await client
         .from(tableName)
@@ -504,6 +515,7 @@ async function fetchServerRecordsForUser(
         .limit(limit);
     }
   } catch (error) {
+    logger.error('Pull sync: fetch error', { table: tableName, error });
     return { data: null, error };
   }
 }

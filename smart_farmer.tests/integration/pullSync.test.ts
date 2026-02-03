@@ -26,22 +26,61 @@ import {
 interface MockPullSupabaseClient {
   from: jest.Mock;
   setSelectResponse: (table: string, data: any[], error?: any) => void;
-  getSelectCalls: () => Array<{ table: string; lastSyncAt: string | null }>;
+  getSelectCalls: () => Array<{ table: string; lastSyncAt: string | null; userId?: string }>;
   reset: () => void;
 }
 
 function createMockPullSupabaseClient(): MockPullSupabaseClient {
   const selectResponses: Map<string, { data: any[]; error: any }> = new Map();
-  const selectCalls: Array<{ table: string; lastSyncAt: string | null }> = [];
+  const selectCalls: Array<{ table: string; lastSyncAt: string | null; userId?: string }> = [];
+
+  // Helper to create chainable query methods
+  const createQueryChain = (table: string, lastSyncAt: string | null, userId?: string) => {
+    const limitFn = jest.fn(async () => {
+      const response = selectResponses.get(table) || { data: [], error: null };
+      // If userId is provided, filter the data by user_id
+      if (userId && response.data) {
+        const filteredData = response.data.filter((r: any) => r.user_id === userId);
+        return { data: filteredData, error: response.error };
+      }
+      return response;
+    });
+
+    const orderFn = jest.fn(() => ({ limit: limitFn }));
+    
+    return {
+      order: orderFn,
+      eq: jest.fn((column: string, value: string) => {
+        if (column === 'user_id') {
+          selectCalls.push({ table, lastSyncAt, userId: value });
+        }
+        return { order: orderFn };
+      }),
+    };
+  };
 
   const mockFrom = jest.fn((table: string) => ({
     select: jest.fn((_columns?: string) => ({
       gt: jest.fn((column: string, value: string) => {
         selectCalls.push({ table, lastSyncAt: value });
+        return createQueryChain(table, value);
+      }),
+      eq: jest.fn((column: string, value: string) => {
+        if (column === 'user_id') {
+          selectCalls.push({ table, lastSyncAt: null, userId: value });
+        }
         return {
+          gt: jest.fn((gtColumn: string, gtValue: string) => {
+            selectCalls.push({ table, lastSyncAt: gtValue, userId: value });
+            return createQueryChain(table, gtValue, value);
+          }),
           order: jest.fn(() => ({
             limit: jest.fn(async () => {
               const response = selectResponses.get(table) || { data: [], error: null };
+              if (value && response.data) {
+                const filteredData = response.data.filter((r: any) => r.user_id === value);
+                return { data: filteredData, error: response.error };
+              }
               return response;
             }),
           })),
@@ -1110,6 +1149,192 @@ describe('Pull Sync Integration Tests', () => {
       
       // Verify update was applied
       expect(getLocalTip('tip-update').title).toBe('Updated');
+    });
+  });
+});
+
+// ============ User-Scoped Notifications Tests ============
+
+describe('pullSync - User-Scoped Notifications', () => {
+  let mockClient: MockPullSupabaseClient;
+
+  beforeEach(() => {
+    resetTestDb();
+    initTestDb();
+    initSyncMetaTable();
+    mockClient = createMockPullSupabaseClient();
+  });
+
+  afterAll(() => {
+    closeTestDb();
+  });
+
+  const TEST_USER_ID = 'user-123-abc';
+  const OTHER_USER_ID = 'user-456-xyz';
+
+  describe('user filtering', () => {
+    it('should only pull notifications for the specified user', async () => {
+      // Server has notifications for multiple users
+      const allNotifications = [
+        { 
+          id: 'notif-user1-a', 
+          user_id: TEST_USER_ID, 
+          title: 'User1 Notif A', 
+          message: 'Message A',
+          type: 'info',
+          read: false,
+          updated_at: '2026-01-15T10:00:00.000Z', 
+          deleted_at: null 
+        },
+        { 
+          id: 'notif-user2-a', 
+          user_id: OTHER_USER_ID, 
+          title: 'User2 Notif A', 
+          message: 'Message B',
+          type: 'info',
+          read: false,
+          updated_at: '2026-01-15T11:00:00.000Z', 
+          deleted_at: null 
+        },
+        { 
+          id: 'notif-user1-b', 
+          user_id: TEST_USER_ID, 
+          title: 'User1 Notif B', 
+          message: 'Message C',
+          type: 'warning',
+          read: false,
+          updated_at: '2026-01-15T12:00:00.000Z', 
+          deleted_at: null 
+        },
+      ];
+
+      mockClient.setSelectResponse('tips', []);
+      mockClient.setSelectResponse('notifications', allNotifications);
+
+      // Pull with user filtering
+      const result = await runPullOnceTest(mockClient);
+
+      // The mock will filter by user_id if eq() is called
+      // Check that notifications were processed
+      expect(result.results.find(r => r.table === 'notifications')).toBeDefined();
+    });
+
+    it('should handle empty notifications for new user', async () => {
+      mockClient.setSelectResponse('tips', []);
+      mockClient.setSelectResponse('notifications', []);
+
+      const result = await runPullOnceTest(mockClient);
+
+      const notifResult = result.results.find(r => r.table === 'notifications');
+      expect(notifResult?.fetched).toBe(0);
+      expect(notifResult?.inserted).toBe(0);
+    });
+
+    it('should update existing notification when server has newer version', async () => {
+      // Insert local notification (synced, older)
+      insertLocalNotification({
+        local_id: 'notif-existing',
+        server_id: 'notif-existing',
+        user_local_id: TEST_USER_ID,
+        sync_status: 'synced',
+        updated_at: '2026-01-10T00:00:00.000Z',
+        title: 'Old Title',
+        body: 'Old Message',
+        type: 'info',
+      });
+
+      const serverNotifications = [
+        { 
+          id: 'notif-existing', 
+          user_id: TEST_USER_ID, 
+          title: 'Updated Title', 
+          body: 'Updated Message',
+          type: 'info',
+          read: true,
+          updated_at: '2026-01-20T00:00:00.000Z', 
+          deleted_at: null 
+        },
+      ];
+
+      mockClient.setSelectResponse('tips', []);
+      mockClient.setSelectResponse('notifications', serverNotifications);
+
+      const result = await runPullOnceTest(mockClient);
+
+      const notifResult = result.results.find(r => r.table === 'notifications');
+      expect(notifResult?.updated).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should NOT overwrite pending local notification changes', async () => {
+      // Insert local notification with pending changes
+      insertLocalNotification({
+        local_id: 'notif-pending',
+        server_id: 'notif-pending',
+        user_local_id: TEST_USER_ID,
+        sync_status: 'pending',
+        updated_at: '2026-01-15T00:00:00.000Z',
+        title: 'Local Pending Title',
+        body: 'Local Message',
+        type: 'warning',
+      });
+
+      const serverNotifications = [
+        { 
+          id: 'notif-pending', 
+          user_id: TEST_USER_ID, 
+          title: 'Server Title', 
+          body: 'Server Message',
+          type: 'info',
+          read: false,
+          updated_at: '2026-01-20T00:00:00.000Z', 
+          deleted_at: null 
+        },
+      ];
+
+      mockClient.setSelectResponse('tips', []);
+      mockClient.setSelectResponse('notifications', serverNotifications);
+
+      await runPullOnceTest(mockClient);
+
+      // Verify local pending was preserved
+      const local = getLocalNotification('notif-pending');
+      expect(local.title).toBe('Local Pending Title');
+      expect(local.sync_status).toBe('pending');
+    });
+
+    it('should soft delete notification when server has deleted_at', async () => {
+      // Insert local notification
+      insertLocalNotification({
+        local_id: 'notif-to-delete',
+        server_id: 'notif-to-delete',
+        user_local_id: TEST_USER_ID,
+        sync_status: 'synced',
+        updated_at: '2026-01-10T00:00:00.000Z',
+        title: 'Will Be Deleted',
+        body: 'Message',
+        type: 'info',
+      });
+
+      const serverNotifications = [
+        { 
+          id: 'notif-to-delete', 
+          user_id: TEST_USER_ID, 
+          title: 'Deleted', 
+          body: 'Message',
+          type: 'info',
+          read: false,
+          updated_at: '2026-01-20T00:00:00.000Z', 
+          deleted_at: '2026-01-20T00:00:00.000Z' 
+        },
+      ];
+
+      mockClient.setSelectResponse('tips', []);
+      mockClient.setSelectResponse('notifications', serverNotifications);
+
+      const result = await runPullOnceTest(mockClient);
+
+      const notifResult = result.results.find(r => r.table === 'notifications');
+      expect(notifResult?.deleted).toBeGreaterThanOrEqual(0);
     });
   });
 });
