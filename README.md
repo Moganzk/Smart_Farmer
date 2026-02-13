@@ -2,7 +2,7 @@
 
 A Flutter + Firebase mobile application for smallholder farmers in Kenya. Provides AI-powered crop disease diagnosis, real-time weather forecasts, and offline-first data synchronization.
 
-![Flutter](https://img.shields.io/badge/Flutter-3.11+-02569B?logo=flutter)
+![Flutter](https://img.shields.io/badge/Flutter-3.27+-02569B?logo=flutter)
 ![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?logo=firebase)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Tests](https://img.shields.io/badge/Tests-140%20passing-brightgreen)
@@ -24,7 +24,7 @@ A Flutter + Firebase mobile application for smallholder farmers in Kenya. Provid
 
 ## 🛠 Tech Stack
 
-- **Framework:** Flutter SDK ^3.11.0 (Dart)
+- **Framework:** Flutter SDK 3.27+ (Dart 3.5+)
 - **Backend:** Firebase (Auth, Firestore, Storage)
 - **State Management:** Provider ^6.1.4
 - **Local Database:** SQLite via `sqflite`
@@ -62,8 +62,8 @@ smart_farmer/
 
 ### Prerequisites
 
-- Flutter SDK 3.11+
-- Dart SDK (bundled with Flutter)
+- Flutter SDK 3.27+
+- Dart SDK 3.5+ (bundled with Flutter)
 - Firebase project configured
 - API keys for weather and AI services
 
