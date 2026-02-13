@@ -1,0 +1,67 @@
+# ==============================================================================
+# Smart Farmer - Continuous Integration
+# ==============================================================================
+# Runs on: Push to main, Pull Requests to main
+# Jobs: Analyze code, Run tests
+# ==============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  FLUTTER_VERSION: "3.27.0"
+
+jobs:
+  analyze:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: smart_farmer
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Verify Flutter installation
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Create dummy .env for CI
+        run: |
+          cat > .env << EOF
+          GEMINI_API_KEY=test_key_for_ci
+          GROQ_API_KEY=test_key_for_ci
+          WEATHER_PROVIDER=openmeteo
+          GOOGLE_WEATHER_API_KEY=test_key_for_ci
+          WEATHER_API_KEY=test_key_for_ci
+          EOF
+
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: smart_farmer/coverage/lcov.info
+          fail_ci_if_error: false
+        continue-on-error: true
