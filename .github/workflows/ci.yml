@@ -13,9 +13,6 @@ on:
   pull_request:
     branches: [master]
 
-env:
-  FLUTTER_VERSION: "3.27.0"
-
 jobs:
   analyze:
     name: Analyze & Test
@@ -31,7 +28,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 

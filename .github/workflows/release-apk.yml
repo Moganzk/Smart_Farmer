@@ -12,9 +12,6 @@ on:
     tags:
       - "v*.*.*"
 
-env:
-  FLUTTER_VERSION: "3.27.0"
-
 jobs:
   build-release:
     name: Build Release APK
@@ -36,7 +33,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -84,7 +80,7 @@ jobs:
             See [CHANGELOG.md](CHANGELOG.md) for details.
             
             ---
-            *Built with Flutter ${{ env.FLUTTER_VERSION }}*
+            *Built with Flutter stable channel*
           files: |
             smart_farmer/build/app/outputs/flutter-apk/smart-farmer-*.apk
           draft: false
