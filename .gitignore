@@ -10,8 +10,8 @@
 .env.*
 !.env.example
 
-# Firebase service account keys
-**/google-services.json
+# Firebase service account keys (keep google-services.json for builds)
+# **/google-services.json
 **/GoogleService-Info.plist
 firebase-debug.log
 firebase-debug.*.log

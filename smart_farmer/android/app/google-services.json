@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "620778595301",
+    "project_id": "device-streaming-2128d6e7",
+    "storage_bucket": "device-streaming-2128d6e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:620778595301:android:8657c840bac434c29e050c",
+        "android_client_info": {
+          "package_name": "com.example.smart_farmer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "620778595301-8k1cb7f9jqlpdcn01dkn36eeje6lkrj2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smart_farmer",
+            "certificate_hash": "e8341197be158232f453167761ca22200c0dd0af"
+          }
+        },
+        {
+          "client_id": "620778595301-h4cdh46slj5hkoqaupn3ak6tr14pgimc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBkIyWwHiuYWuLpUpF8AP2mNNbH6dE8rI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "620778595301-h4cdh46slj5hkoqaupn3ak6tr14pgimc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "620778595301-4ddf6efjiq0rljq4grb8js67atj240mc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smartFarmer"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:620778595301:android:5284a3a8f2cc02439e050c",
+        "android_client_info": {
+          "package_name": "com.smartfarmer.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "620778595301-1ta3t6rgoj1247ikk643pe5dfdmmrid3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.smartfarmer.app",
+            "certificate_hash": "e8341197be158232f453167761ca22200c0dd0af"
+          }
+        },
+        {
+          "client_id": "620778595301-h4cdh46slj5hkoqaupn3ak6tr14pgimc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBkIyWwHiuYWuLpUpF8AP2mNNbH6dE8rI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "620778595301-h4cdh46slj5hkoqaupn3ak6tr14pgimc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "620778595301-4ddf6efjiq0rljq4grb8js67atj240mc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smartFarmer"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
